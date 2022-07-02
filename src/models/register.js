@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema({
     confpassword:{
         type:String,
     },
+    role:{
+        type:String,
+        default:"user"
+    },
     tokens:[{
         token:{
             type:String,

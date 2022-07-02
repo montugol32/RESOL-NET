@@ -55,10 +55,10 @@
     border: none;
     border-radius: 1.5rem;
     padding: 2%;
-    background: #0062cc;
+    background: #255636;
     color: #fff;
     font-weight: 600;
-    width: 50%;
+    width: 30%;
     cursor: pointer;
 }
 .register .nav-tabs{
@@ -104,4 +104,40 @@
     font-weight: 600;
     width: 70%;
     cursor: pointer;
+}
+.issue-text{
+    background: -webkit-linear-gradient(left, #92c2de, #545b62);
+    margin-top: 3%;
+    padding: 3%;
+}
+.backimg{
+    background-image: url("../img/img-2.png");
+    background-repeat:no-repeat;
+    background-size:cover;
+    background-position:top;
+    height: auto;
+}
+.footer{
+    position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+}
+.rleft{
+    text-align: center;
+    color: rgb(0, 0, 0);
+    margin-top: 4%;
+}
+.rleft h1{
+    margin-top: 15%;
+    margin-bottom: 5%;
+    width: 25%;
+    -webkit-animation: mover 2s infinite  alternate;
+    animation: mover 1s infinite  alternate;
+}
+.rleft p{
+    margin-top: 5%;
+    margin-bottom: 5%;
+    width: 25%;
+   
 }

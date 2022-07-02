@@ -4,9 +4,14 @@ const path = require("path");
 const app = express();
 const hbs = require("hbs");
 const bcrypt =require("bcryptjs");
+const cookieParser = require("cookie-parser");
+//const auth = require("../src/middleware/auth");
+ const {auth,authRole} = require("../src/middleware/auth");
+
 
 require("./db/conn");
 const Register=require("./models/register");
+const Issue=require("./models/issue");
 
 const port =process.env.PORT || 3000;
 
@@ -15,6 +20,7 @@ const template_path =path.join(__dirname,"../templates/views");
 const partials_path =path.join(__dirname,"../templates/partials");
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.urlencoded({extends:false}));
 
 
@@ -26,6 +32,54 @@ hbs.registerPartials(partials_path);
 app.get("/",(req,res)=>{  
     res.render("index");
 });
+app.get("/secret",auth, async (req,res,next)=>{  
+    const issue = await Issue.find({reg_no:req.user.reg_no}).exec((err,issuedata)=>{
+        if(issuedata){
+            res.render("secret",{data:issuedata});
+        }
+    });
+});
+app.get("/loggedindex",auth, async (req,res,next)=>{  
+    const issue = await Issue.find({reg_no:req.user.reg_no}).exec((err,issuedata)=>{
+        if(issuedata){
+            res.render("loggedindex",{data:issuedata});
+        }
+    });
+});
+app.post("/secret",auth,async (req,res)=>{
+    try{
+        const newIssue = new Issue({
+            reg_no:req.user.reg_no,
+            desc:req.body.desc,
+            place:req.body.place
+        });
+        const issued = await newIssue.save();
+        //res.status(201).render("secret");
+        const issue = await Issue.find({reg_no:req.user.reg_no}).exec((err,issuedata)=>{
+            if(issuedata){
+                res.render("secret",{data:issuedata});
+            }
+        });
+    }
+    catch(error){
+        res.status(400).send(error);
+    }
+});
+app.get("/logout", auth,async(req,res)=>{
+    try{
+        req.user.tokens = req.user.tokens.filter((currElement)=>{
+            return currElement.token != req.token;
+        });
+        res.clearCookie("jwt");
+        console.log("logout");
+        await req.user.save();
+        res.render("login");
+    }
+    catch(error){
+        res.status(500).send(error);
+    }
+});
+
 app.get("/register",(req,res)=>{  
     res.render("register");
 });
@@ -38,10 +92,14 @@ app.post("/register", async (req,res)=>{
                 reg_no:req.body.reg_no,
                 email:req.body.email,
                 password:req.body.pass,
-                confpassword:req.body.cpass
+                confpassword:req.body.cpass,
+                //role:"user"
             });
             const token = await registerUser.generateAuthToken();
 
+            res.cookie("jwt",token,{
+                httpOnly:true
+            });
             const registered=await registerUser.save();
             res.status(201).render("index");
         }else{
@@ -65,10 +123,14 @@ app.post("/login", async (req,res)=>{
         const userReg_no= await Register.findOne({reg_no:reg_no});
         const isMatch = await bcrypt.compare(pass,userReg_no.password);
         const token = await userReg_no.generateAuthToken();
+        res.cookie("jwt",token,{
+            httpOnly:true,
+            //secure:true
+        });
         // console.log(pass);
         // console.log(userReg_no.password);
         if(isMatch){
-            res.render("index");
+            res.render("loggedindex");
         }
         else{
             res.send("invalid password");
@@ -78,6 +140,72 @@ app.post("/login", async (req,res)=>{
     }
 }); 
 
+ app.get("/admin",auth,authRole('admin'),async(req,res)=>{  
+     //res.render("admin");
+     const issue = await Issue.find({$or: [ { statusofIssue:"unresolve" }, { statusofIssue:"panding" } ]}).sort({date: -1}).exec((err,issuedata)=>{
+        if(issuedata){
+            res.render("admin",{data:issuedata});
+        }
+    });
+ });
+
+ app.post("/unresolve",auth,authRole('admin'),async(req,res)=>{  
+    //res.render("admin");
+    try{
+        const filter={_id:req.body.id};
+        const update={statusofIssue:"unresolve"};
+        let doc =await Issue.findOneAndUpdate(filter,update,{
+            returnOriginal: false
+        });
+        const issue = await Issue.find({$or: [ { statusofIssue:"unresolve" }, { statusofIssue:"panding" } ]}).sort({date: -1}).exec((err,issuedata)=>{
+            if(issuedata){
+                res.render("admin",{data:issuedata});
+            }
+        });
+    }
+    catch(err){
+        res.status(401).send(err);
+    }
+});
+app.post("/panding",auth,authRole('admin'),async(req,res)=>{  
+    //res.render("admin");
+    try{
+        const filter={_id:req.body.id};
+        const update={statusofIssue:"panding"};
+        console.log(req.body.id);
+        let doc =await Issue.findOneAndUpdate(filter,update,{
+            returnOriginal: false
+        });
+        const issue = await Issue.find({$or: [ { statusofIssue:"unresolve" }, { statusofIssue:"panding" } ]}).sort({date: -1}).exec((err,issuedata)=>{
+            if(issuedata){
+                res.render("admin",{data:issuedata});
+            }
+        });
+    }
+    catch(err){
+        res.status(401).send(err);
+    }
+});
+
+app.post("/done",auth,authRole('admin'),async(req,res)=>{  
+    //res.render("admin");
+    try{
+        const filter={_id:req.body.id};
+        const update={statusofIssue:"done"};
+        console.log(req.body.id);
+        let doc =await Issue.findOneAndUpdate(filter,update,{
+            returnOriginal: false
+        });
+        const issue = await Issue.find({$or: [ { statusofIssue:"unresolve" }, { statusofIssue:"panding" } ]}).sort({date: -1}).exec((err,issuedata)=>{
+            if(issuedata){
+                res.render("admin",{data:issuedata});
+            }
+        });
+    }
+    catch(err){
+        res.status(401).send(err);
+    }
+});
 app.listen(port,()=>{
     console.log(`server is running ${port}`);
 })
